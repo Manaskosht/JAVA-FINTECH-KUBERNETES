@@ -1,6 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
-metadata:
+metadata: 
   name: backend
   namespace: banking
 
@@ -14,6 +14,8 @@ spec:
       labels:
         app: backend
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: worker-node-1
       containers:
         - name: backend
           image: manas181996/backend:1.0
@@ -21,7 +23,7 @@ spec:
             - containerPort: 8080
           env:
             - name: DB_URL
-              value: jdbcpostgressql://postgres-svc.banking.svc.cluster.local:5432/bankingdb
+              value: jdbc:postgresql://postgres-svc.banking.svc.cluster.local:5432/bankingdb
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -30,18 +32,17 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secret
+                  name: postgres-secret 
                   key: POSTGRES_PASSWORD
             - name: JWT_SECRET
-              valueFrom: "1df0f6fe85156663c1c36121a92b3fc1702bcf52779752d63c25d75915bcd831"
-            - name: JWT_EXPIRATION
+              value: "1df0f6fe85156663c1c36121a92b3fc1702bcf52779752d63c25d75915bcd831"
+            - name: JWT_EXPIRATION_MS
               value: "86400000"
             - name: CORS_ALLOWED_ORIGIN
               value: "*"
-          
           readinessProbe:
-            httpGet:
+            httpGet: 
               path: /actuator/health
               port: 8080
             initialDelaySeconds: 50
-            pereiodSeconds: 10
+            periodSeconds: 10  
