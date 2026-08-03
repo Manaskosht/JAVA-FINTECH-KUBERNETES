@@ -1,13 +1,14 @@
 prometheus:
   prometheusSpec:
     retention: 15d
-    nodeselector:
+    nodeSelector:
       kubernetes.io/hostname: monitoring-node
     storageSpec:
       volumeClaimTemplate:
         spec:
           storageClassName: local-path
-          accessModes: ["ReadWriteOnce"]
+          accessModes:
+            - ReadWriteOnce
           resources:
             requests:
               storage: 20Gi
@@ -20,7 +21,7 @@ prometheus:
         memory: 1Gi
 
 grafana:
-  nodeselector:
+  nodeSelector:
     kubernetes.io/hostname: monitoring-node
   persistence:
     enabled: true
@@ -39,11 +40,11 @@ alertmanager:
       volumeClaimTemplate:
         spec:
           storageClassName: local-path
-          accessModes: ["ReadWriteOnce"]
+          accessModes:
+            - ReadWriteOnce
           resources:
             requests:
               storage: 2Gi
-            
 
 additionalPrometheusRules:
   custom-crashloop-rules:
@@ -51,16 +52,15 @@ additionalPrometheusRules:
       - name: custom-kubernetes-apps
         rules:
           - alert: kubePodcrashLoopingFast
-            expr: max_overtime(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}{5m}) >= 1
+            expr: max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}[5m]) >= 1
             for: 5m
             labels:
               severity: warning
             annotations:
-              description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is in crashLoopBackoff"
-              
+              description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is in CrashLoopBackOff"
 
           - alert: kubePodOOMKilled
-            expr: max_overtime(kube_pod_container_status_terminated_reason{reason="OOMKilled"}) >= 1
+            expr: max_over_time(kube_pod_container_status_terminated_reason{reason="OOMKilled"}[5m]) >= 1
             for: 10s
             labels:
               severity: critical
