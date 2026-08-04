@@ -3,7 +3,7 @@ prometheus:
     retention: 15d
 
     nodeSelector:
-      kubernetes.io/hostname: monitoring-node
+      kubernetes.io/hostname: monitoring
 
     storageSpec:
       volumeClaimTemplate:
@@ -26,7 +26,7 @@ prometheus:
 
 grafana:
   nodeSelector:
-    kubernetes.io/hostname: monitoring-node
+    kubernetes.io/hostname: monitoring
 
   persistence:
     enabled: true
@@ -41,9 +41,10 @@ grafana:
 
 
 alertmanager:
+
   alertmanagerSpec:
     nodeSelector:
-      kubernetes.io/hostname: monitoring-node
+      kubernetes.io/hostname: monitoring
 
     storage:
       volumeClaimTemplate:
@@ -62,6 +63,7 @@ alertmanager:
 
 
   config:
+
     global:
       resolve_timeout: 5m
 
@@ -73,53 +75,84 @@ alertmanager:
         - alertname
 
       group_wait: 30s
-      group_interval: 4h
+      group_interval: 5m
       repeat_interval: 1h
 
+
       routes:
-        - receiver: "null"
+
+        # Ignore system noise alerts
+        - receiver: null
           matchers:
             - alertname=~"Watchdog|Kube.*Unreachable|Alertmanager.*Failed.*|etcd.*"
 
 
+
     receivers:
 
-      - name: "null"
+      - name: null
 
 
       - name: discord-notifications
+
         discord_configs:
+
           - webhook_url: "https://discordapp.com/api/webhooks/1534046506607312926/7yA4MdWMwHTEWwOCuv0a5bWX81In7SCa2id_CRXMj4QsREALjwyb4FmfkKgOT3TT1cIW"
 
             send_resolved: true
 
+
+            title: "🚨 Kubernetes Alert"
+
+
             message: |
-              🚨 **Kubernetes Alert**
 
-              Alert: {{ .CommonLabels.alertname }}
-
-              Severity: {{ .CommonLabels.severity }}
-
-              Namespace: {{ .CommonLabels.namespace }}
+              Status: {{ .Status }}
 
               {{ range .Alerts }}
-              Pod: {{ .Labels.pod }}
-              Container: {{ .Labels.container }}
+
+              Alert Name:
+              {{ .Labels.alertname }}
+
+
+              Severity:
+              {{ .Labels.severity }}
+
+
+              Namespace:
+              {{ .Labels.namespace }}
+
+
+              Pod:
+              {{ .Labels.pod }}
+
+
+              Container:
+              {{ .Labels.container }}
+
 
               Description:
+
               {{ .Annotations.description }}
+
+
+              ======================
 
               {{ end }}
 
 
 
 additionalPrometheusRulesMap:
+
   custom-crashloop-rule:
 
     groups:
+
       - name: custom-kubernetes-apps
 
+
         rules:
+
 
           - alert: KubePodCrashLoopingFast
 
@@ -128,9 +161,12 @@ additionalPrometheusRulesMap:
             for: 30s
 
             labels:
+
               severity: warning
 
+
             annotations:
+
               description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is in CrashLoopBackOff"
 
 
@@ -142,7 +178,10 @@ additionalPrometheusRulesMap:
             for: 10s
 
             labels:
+
               severity: critical
 
+
             annotations:
+
               description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container }} was OOMKilled"
