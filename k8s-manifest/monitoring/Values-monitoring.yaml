@@ -2,7 +2,7 @@ prometheus:
   prometheusSpec:
     retention: 15d
     nodeSelector:
-      kubernetes.io/hostname: monitoring
+      kubernetes.io/hostname: monitoring-node
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -21,7 +21,7 @@ prometheus:
 
 grafana:
   nodeselector:
-    kubernetes.io/hostname: monitoring
+    kubernetes.io/hostname: monitoring-node
   persistence:
     enabled: true
     storageClassName: local-path
@@ -29,12 +29,12 @@ grafana:
   adminPassword: "StrongPassword123!"
   service:
     type: NodePort
-    nodePort: 30090
+    nodePort: 30093
 
 alertmanager:
   alertmanagerSpec:
     nodeSelector:
-      kubernetes.io/hostname: monitoring
+      kubernetes.io/hostname: monitoring-node
     storage:
       volumeClaimTemplate:
         spec:
@@ -43,7 +43,27 @@ alertmanager:
           resources:
             requests:
               storage: 2Gi
-            
+
+  service:
+    type: NodePort
+    nodePort: 30093
+  config:
+    global:
+      resolve_timeout: 5m    
+    route:
+      receiver: 'discord-notifications'     
+      group_by: ['alertname']  
+      group_wait: 30s
+      group_interval: 4h
+      routes:
+        - receiver: 'null'
+          matchers:
+            - alertname =~ "Watchdog|Kube.*Unreachable|Alertmanager.*Failed.*|etcd.*"
+    receiver:
+      - name: 'null'
+      - name: 'discord-notifications'
+        discord_configs:
+          - webhook_url: 'https://discordapp.com/api/webhooks/1534046506607312926/7yA4MdWMwHTEWwOCuv0a5bWX81In7SCa2id_CRXMj4QsREALjwyb4FmfkKgOT3TT1cIW'
 
 additionalPrometheusRulesMap:
   custom-crashloop-rule:
