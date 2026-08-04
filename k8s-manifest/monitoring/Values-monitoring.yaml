@@ -1,8 +1,10 @@
+```yaml
 prometheus:
   prometheusSpec:
     retention: 15d
     nodeSelector:
       kubernetes.io/hostname: monitoring-node
+
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -11,6 +13,7 @@ prometheus:
           resources:
             requests:
               storage: 20Gi
+
     resources:
       requests:
         cpu: 250m
@@ -19,22 +22,28 @@ prometheus:
         cpu: 500m
         memory: 1Gi
 
+
 grafana:
   nodeSelector:
     kubernetes.io/hostname: monitoring-node
+
   persistence:
     enabled: true
     storageClassName: local-path
     size: 5Gi
+
   adminPassword: "StrongPassword123!"
+
   service:
     type: NodePort
     nodePort: 30090
+
 
 alertmanager:
   alertmanagerSpec:
     nodeSelector:
       kubernetes.io/hostname: monitoring-node
+
     storage:
       volumeClaimTemplate:
         spec:
@@ -47,30 +56,46 @@ alertmanager:
   service:
     type: NodePort
     nodePort: 30093
+
+
   config:
     global:
-      resolve_timeout: 5m    
+      resolve_timeout: 5m
+
     route:
-      receiver: 'discord-notifications'     
-      group_by: ['alertname']  
+      receiver: discord-notifications
+      group_by:
+        - alertname
       group_wait: 30s
       group_interval: 4h
+      repeat_interval: 1h
+
       routes:
-        - receiver: 'null'
+        - receiver: null
           matchers:
-            - alertname =~ "Watchdog|Kube.*Unreachable|Alertmanager.*Failed.*|etcd.*"
-    receiver:
-      - name: 'null'
-      - name: 'discord-notifications'
+            - alertname=~"Watchdog|Kube.*Unreachable|Alertmanager.*Failed.*|etcd.*"
+
+
+    receivers:
+
+      - name: null
+
+
+      - name: discord-notifications
         discord_configs:
-          - webhook_url: 'https://discordapp.com/api/webhooks/1534046506607312926/7yA4MdWMwHTEWwOCuv0a5bWX81In7SCa2id_CRXMj4QsREALjwyb4FmfkKgOT3TT1cIW'
+          - webhook_url: "https://discordapp.com/api/webhooks/1534046506607312926/7yA4MdWMwHTEWwOCuv0a5bWX81In7SCa2id_CRXMj4QsREALjwyb4FmfkKgOT3TT1cIW"
+            send_resolved: true
+
+
 
 additionalPrometheusRulesMap:
   custom-crashloop-rule:
     groups:
       - name: custom-kubernetes-apps
+
         rules:
-          - alert: kubePodCrashLoopingFast
+
+          - alert: KubePodCrashLoopingFast
             expr: max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}[5m]) >= 1
             for: 30s
             labels:
@@ -78,10 +103,12 @@ additionalPrometheusRulesMap:
             annotations:
               description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is in CrashLoopBackOff"
 
-          - alert: kubePodOOMKilled
+
+          - alert: KubePodOOMKilled
             expr: kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
             for: 10s
             labels:
               severity: critical
             annotations:
               description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container }} was OOMKilled"
+```
